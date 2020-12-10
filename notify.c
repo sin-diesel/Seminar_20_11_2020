@@ -29,7 +29,7 @@ int main (int argc, char** argv) {
     }
 
     uint32_t mask = IN_CREATE | IN_DELETE | IN_MOVE_SELF;
-    char buf[sizeof(struct inotify_event) + NAME_MAX + 1] = {};
+    char buf[BUFSIZ] = {};
 
     int watch = inotify_add_watch(fd, dir_name, mask);
     if (watch < 0) {
@@ -41,22 +41,23 @@ int main (int argc, char** argv) {
     //event = (struct inotify_event*) buf;
 
     while (1) {
-        int resop = read(fd, buf, sizeof(struct inotify_event));
+        int resop = read(fd, buf, BUFSIZ);
         printf("Bytes read: %d\n", resop);
         if (resop > 0) {
 
             printf("Events read: %ld\n", resop / sizeof(struct inotify_event));
-            event = (struct inotify_event*) buf;
-            printf("Path: %s ", event->name);
+            // event = (struct inotify_event*) buf;
+            // printf("Path: %s ", event->name);
 
-            if (event->mask & IN_CREATE) {
-                printf("Dir created\n");
-            } else if (event->mask & IN_DELETE) {
-                printf("Dir deleted\n");
-            } else if (event->mask & IN_MOVE_SELF) {
-                printf("Dir moved\n");
-            } else {
-                printf("UNKNOWN\n");
+            for (char* event_data = buf; event_data < buf + BUFSIZ; event_data += sizeof(struct inotify_event)) {
+            event = (struct inotify_event*) event_data;
+                if (event->mask == IN_CREATE) {
+                    printf("Dir created\n");
+                } else if (event->mask == IN_DELETE) {
+                    printf("Dir deleted\n");
+                } else if (event->mask == IN_MOVE_SELF) {
+                    printf("Dir moved\n");
+                }
             }
         } else {
             perror("Read not succesfull\n");
